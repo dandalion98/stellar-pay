@@ -402,7 +402,7 @@ class StellarAccount {
 		return outRecord
 	}
 
-	async sendPathPayment(sendAsset, sendMax, dest, destAsset, destAmount) {
+	async sendPathPayment(sendAsset, sendMax, dest, destAsset, destAmount, path) {
 		try {
 			await this.loadAccount()
 
@@ -412,11 +412,11 @@ class StellarAccount {
 
 			let data = {
 				sendAsset: sendAsset,
-				sendMax: sendMax,
+				sendMax: String(sendMax),
 				destination: dest,
 				destAsset: destAsset,
-				destAmount: destAmount,
-				path: []
+				destAmount: String(destAmount),
+				path: path
 			}
 			console.dir(data)
 			// txBuilder.addOperation(StellarSdk.Operation.createAccount({
@@ -436,7 +436,17 @@ class StellarAccount {
 		} catch (error) {
 			log.error(`error sending payment: ${error}`)
 			log.error(error)
-			console.dir(error.data.extras)
+			var stringify = require('json-stringify-safe');
+			var json = stringify(error, null, 4);
+			let fs = require('fs')
+			fs.writeFileSync("./error", json, 'utf8');
+
+			if (error.data) {
+				log.info("---------------------------------")
+				log.info("DUMP extras")
+				log.info("---------------------------------")
+				console.dir(error.data)
+			}
 			throw error
 		}
 	}
@@ -711,6 +721,24 @@ class StellarAccount {
 		return out
 	}
 
+	async getBalanceFull() {
+		let account = await this.server.accounts().accountId(this.address).call()
+
+		let out = {}
+		for (var row in account.balances) {
+			var asset = account.balances[row];
+			console.dir(asset)
+
+			if (asset.asset_type == 'native') {
+				out.native = +asset.balance
+			} else {
+				out[`${asset.asset_code}-${asset.asset_issuer}`] = +asset.balance
+			}
+		}
+
+		return out
+	}
+
 	async loadAccount() {
 		if (this.account) {
 			return
@@ -825,6 +853,40 @@ class StellarAccount {
 		}
 
 		return record
+	}
+
+	async listEffects(lastSeenRecord) {
+		console.log("lsiting all tx")
+		let batch = await this.server.effects().forAccount(this.address).order('desc').limit(100).call()
+		console.dir(batch)
+		let doContinue = true
+		let out = []
+		do {
+			doContinue = false
+			if (batch.records.length == 0 ) {
+				break
+			}
+
+			console.log("got " + batch.records.length)
+			for (let record of batch.records) {
+				if (lastSeenRecord && record.id == lastSeenRecord) {
+					console.log("already seen")
+					doContinue = false
+					break
+				}
+
+				out.push(record)
+			} // for loop
+
+			if (batch.records.length == 0 || !doContinue) {
+				break
+			}
+
+			batch = await batch.next()
+
+		} while (doContinue)
+
+		return out
 	}
 
 	async listIncomingTransactions(lastSeenRecord) {

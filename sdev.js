@@ -113,7 +113,7 @@ if (method) {
             console.log(k)
         }
     } else if (method=="xdr") {
-        console.dir(JSON.stringify(StellarSdk.xdr.TransactionEnvelope.fromXDR(arguments[3], 'base64')));
+        console.dir(JSON.stringify(StellarSdk.xdr.TransactionEnvelope.fromXDR(arguments[3])));
     }
     else {
         throw new Error("op does not exist:" + operation)
