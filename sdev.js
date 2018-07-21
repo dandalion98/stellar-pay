@@ -83,7 +83,7 @@ let operationMap = {
     "balance": balance,
     "send": send,    
     "pay": pay,
-    "paywin": payWin,
+    "send": send,
     "info": info,
     "tx": tx,
     "encode": encode,
@@ -94,6 +94,7 @@ let operationMap = {
     "pathxlm": pathToNative,
     "pathwin": pathToWin,
     "test": test,
+    "clearOffers": clearOffers,
     "domain": setDomain
 }
 
@@ -166,16 +167,6 @@ async function balance(name) {
     let account = stellarServer.getAccount(wallets[name])
     let balance = await account.getBalance()
     console.dir(balance)
-}
-
-async function payWin(name, destination, amount, memo) {
-    let o
-    try {
-        o = await pay(name, destination, amount, memo, winAsset)
-    } catch (error) {
-        log.error(error)
-        console.dir(JSON.stringify(StellarSdk.xdr.TransactionEnvelope.fromXDR(o.data.extras.envelope_xdr, 'base64')));
-    }
 }
 
 async function send(name, destination, amount, assetName) {
@@ -252,7 +243,8 @@ async function trustAsset(walletName, assetName, limit) {
 
             let server = stellarServer.server
             let receiver = await server.loadAccount(w.address)
-            // console.dir(receiver)
+            console.dir(receiver)
+            console.dir(asset)
             var transaction = new StellarSdk.TransactionBuilder(receiver)
                 .addOperation(StellarSdk.Operation.changeTrust({
                     asset: asset,
@@ -270,14 +262,21 @@ async function trustAsset(walletName, assetName, limit) {
     }
 }
 
+function getMasterAccount() {
+    return wallets["master"]
+}
+
 function getAsset(name) {
     name = name.toLowerCase()
-    if (name == "win") {
-        return winAsset
-    } else if (name == "native" || name == "xlm") {
+    if (name == "native" || name == "xlm") {
         return nativeAsset
     } else {
-        throw new Error("invalid asset")
+        let masterAccount = getMasterAccount()
+        if (!masterAccount) {
+            throw new Error("No master account! Please create an account named master")
+        }
+
+        return new StellarSdk.Asset(name.toUpperCase(), masterAccount.address);
     }
 }
 
@@ -286,6 +285,12 @@ async function setDomain(walletName, d) {
     let wallet = wallets[walletName]
     let a = await stellarServer.getAccount(wallet)
     await a.setHomeDomain(d)
+}
+
+async function clearOffers(walletName) {
+    let wallet = wallets[walletName]    
+    let a = stellarServer.getAccount(wallet)
+    let o = await a.deleteAllOffers()
 }
 
 async function createOffer(walletName, selling, buying, price, amount) {
@@ -378,3 +383,7 @@ async function encode(walletName, f, pass) {
     let cmd = `echo ${o} | openssl enc -base64 -e -aes-256-cbc -a -salt -k ${pass} -out ${f}`
     let { out, err } = await exec(cmd);
 }
+
+process.on('unhandledRejection', (reason, p) => {
+    console.log('Unhandled Rejection at: Promise', p, 'reason:', reason);
+});

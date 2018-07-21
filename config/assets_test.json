@@ -1,16 +1,6 @@
 {
-    "C1" : {
-        "code": "C1",
-        "issuer": "GDPKL5EPVJ6K5BCRUBC3OXBENE3PDDVTI6VZRUFCDK4E2Y6DXW7NU5Y3"
-    },
-
-    "C2": {
-        "code": "C2",        
-        "issuer": "GDPKL5EPVJ6K5BCRUBC3OXBENE3PDDVTI6VZRUFCDK4E2Y6DXW7NU5Y3"
-    },
-
-    "C3": {
-        "code": "C3",
-        "issuer": "GDPKL5EPVJ6K5BCRUBC3OXBENE3PDDVTI6VZRUFCDK4E2Y6DXW7NU5Y3"
+    "EURT" : {
+        "code": "EURT",
+        "issuer": "GABZWQ5SDKG7UX5UJMXPROHICFUPIZ3XY5FDRIZBXRK4DFBVM2LQNQMA"
     }
 }

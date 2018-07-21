@@ -11,3 +11,5 @@ node_modules/
 
 wallets_live.json
 assets_live.json
+wallets.json
+config/

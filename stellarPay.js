@@ -610,7 +610,7 @@ class StellarAccount {
 		try {
 			await this.loadAccount()
 
-			log.info(`sending payment to dest=${destination} amt=${amount}`)
+			log.info(`sending payment to dest=${destination} amt=${amount} asset=${asset.code}`)
 			console.dir(asset)
 			var server = this.server;
 			var destinationId = destination
@@ -756,17 +756,26 @@ class StellarAccount {
 	}
 
 	async getOffers() {
-		return await this.server.offers('accounts', this.address).call()
+		let result = await this.server.offers('accounts', this.address).call()
+		return result.records
 	}
 
 	async getOffer(offerId) {
 		let os = await this.getOffers()
-		for (let o of os.records) {
+		for (let o of os) {
 			if (o.id == +offerId) {
 				return o
 			}
 		}
 		return []
+	}
+
+	async deleteAllOffers() {
+		let os = await this.getOffers()
+		console.dir(os)
+		for (let offer of os) {
+			this.deleteOffer(offer.id)
+		}
 	}
 
 	async deleteOffer(offerId) {
