@@ -709,7 +709,7 @@ class StellarAccount {
 		let out = {}
 		for (var row in account.balances) {
 			var asset = account.balances[row];
-			console.dir(asset)
+			// console.dir(asset)
 
 			if (asset.asset_type == 'native') {
 				out.XLM = asset.balance
@@ -865,13 +865,11 @@ class StellarAccount {
 	}
 
 	async listEffects(lastSeenRecord) {
-		console.log("lsiting all tx")
-		let batch = await this.server.effects().forAccount(this.address).order('desc').limit(100).call()
-		console.dir(batch)
+		let batch = await this.server.effects().forAccount(this.address).order('desc').limit(200).call()
+		// console.dir(batch)
 		let doContinue = true
 		let out = []
 		do {
-			doContinue = false
 			if (batch.records.length == 0 ) {
 				break
 			}
