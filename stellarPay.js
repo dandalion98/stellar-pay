@@ -68,7 +68,7 @@ StellarServer.prototype.listIncomingTransactions = async function (account, last
 	do {
 		for (let record of transactions.records) {
 			if (lastSeenRecord && record.id == lastSeenRecord) {
-				console.log("already seen")
+				// console.log("already seen")
 				doContinue = false
 				break
 			}
@@ -98,7 +98,7 @@ StellarServer.prototype.listIncomingTransactions = async function (account, last
                                 memo: memo, 
                                 amount: amount, 
                                 transactionId: record.id }
-			console.dir(outRecord)
+			// console.dir(outRecord)
 			out.push(outRecord)
 		} // for loop
 
@@ -727,7 +727,7 @@ class StellarAccount {
 		let out = {}
 		for (var row in account.balances) {
 			var asset = account.balances[row];
-			console.dir(asset)
+			// console.dir(asset)
 
 			if (asset.asset_type == 'native') {
 				out.native = +asset.balance
@@ -877,7 +877,7 @@ class StellarAccount {
 			console.log("got " + batch.records.length)
 			for (let record of batch.records) {
 				if (lastSeenRecord && record.id == lastSeenRecord) {
-					console.log("already seen")
+					// console.log("already seen")
 					doContinue = false
 					break
 				}
@@ -903,7 +903,7 @@ class StellarAccount {
 		do {
 			for (let record of transactions.records) {
 				if (lastSeenRecord && record.id == lastSeenRecord) {
-					console.log("already seen")
+					// console.log("already seen")
 					doContinue = false
 					break
 				}
