@@ -67,15 +67,17 @@ class Wallet {
 }
 
 let arguments = process.argv
-let walletName = arguments[2]
-let operation = arguments[3]
+let walletName, walletOp, specialOp
 
-if (!walletName) {
-    throw new Error("wallet name is required")
+if (!arguments[2]) {
+    throw new Error("wallet name or special operation is required")
 }
 
-if (!operation) {
-    throw new Error("operation is required")
+if (arguments[3]) {
+    walletName = arguments[2]
+    walletOp = arguments[3]    
+} else {
+    specialOp = arguments[2]
 }
 
 let operationMap = {
@@ -92,32 +94,29 @@ let operationMap = {
     "offer": createOffer,
     "offerdel": deleteOffer,
     "pathxlm": pathToNative,
-    "pathwin": pathToWin,
     "test": test,
     "clearOffers": clearOffers,
     "domain": setDomain
 }
 
-let method = operationMap[operation]
-if (method) {
+if (walletName) {
     try {
-        method(walletName, ...arguments.slice(4));
+        walletOp = operationMap[walletOp]
+        walletOp(walletName, ...arguments.slice(4));
     } catch (error) {
         log.error(error)
     }
 } else {
-    console.dir(arguments)
-    let method = arguments[2]
-    log.info("m="+method)
-    if (method == "help") {
+    if (specialOp == "help") {
+        log.info("Supported wallet-specific commands:")
         for (let k in operationMap) {
             console.log(k)
         }
-    } else if (method=="xdr") {
+    } else if (specialOp=="xdr") {
         console.dir(JSON.stringify(StellarSdk.xdr.TransactionEnvelope.fromXDR(arguments[3])));
     }
     else {
-        throw new Error("op does not exist:" + operation)
+        throw new Error("Special operation does not exist:" + specialOp)
     }
 }
 
@@ -301,14 +300,13 @@ async function createOffer(walletName, selling, buying, price, amount) {
         selling = assets.get(selling)
         let a = stellarServer.getAccount(wallet)
         let o = await a.createOffer(selling, buying, price, amount)
-        console.dir(o)
-        console.dir(JSON.stringify(StellarSdk.xdr.TransactionEnvelope.fromXDR(o.envelope_xdr, 'base64')));
-        console.dir(JSON.stringify(StellarSdk.xdr.TransactionResult.fromXDR(o.result_xdr, 'base64')));
-        console.dir(JSON.stringify(StellarSdk.xdr.TransactionMeta.fromXDR(o.result_meta_xdr, 'base64')));
+        // console.dir(o)
+        // console.dir(JSON.stringify(StellarSdk.xdr.TransactionEnvelope.fromXDR(o.envelope_xdr, 'base64')));
+        // console.dir(JSON.stringify(StellarSdk.xdr.TransactionResult.fromXDR(o.result_xdr, 'base64')));
+        // console.dir(JSON.stringify(StellarSdk.xdr.TransactionMeta.fromXDR(o.result_meta_xdr, 'base64')));
     } catch (error) {
-        console.error(error)
-        // console.dir(error.data)
-        console.dir(error.data.extras.result_codes)
+        log.error("Failed to create offer:")
+        console.dir(error.code)
     }
 }
 
@@ -340,42 +338,8 @@ async function pathToNative(srcWallet, destWallet, amt) {
     }
 }
 
-async function pathToWin(srcWallet, destWallet, amt) {
-}
-
 async function test(walletName) {
-    try {
-        let wallet = wallets[walletName]
-        let a = stellarServer.getAccount(wallet)
-        let t = await a.hasTrust(StellarSdk.Asset.native())
-        console.log("trust: "+t)
-
-        // let a = stellarServer.server.assets()
-        // let t = a.forCode("WIN")
-        // let o = await t.call()
-        // console.dir(o)
-
-        // let opb = stellarServer.server.operations()
-        // let o1 = await opb.forTransaction("49a0dfee2a0f9543c69a81509e871dafedcbed128691cf0835e808fd70e991f2").call()
-        // // console.dir(o1)
-
-        // let tb = stellarServer.server.trades()
-        // let o = await tb.forOffer("140707").call()
-        // // console.dir(o)
-        // for (let t of o.records) {
-        //     console.dir(t)
-        //     let o = await t.operation()
-        //     // console.log("op")
-        //     // console.dir(o)
-        //     // console.log(t.counter())
-        // }
-    } catch (error) {
-        console.error(error)
-    }
-    // let a = await stellarServer.getAccount(wallets[walletName])
-    // let r = await a.sendPathPayment(winAsset, "100", wallets["s4"].address, nativeAsset, "1")    
-    // console.dir(r)
-}
+}    
 
 async function encode(walletName, f, pass) {
     let wallet = wallets[walletName]

@@ -1,24 +1,25 @@
 'use strict';
 
 var _ = require('lodash'),
-  path = require('path'),
-  StellarSdk = require('stellar-sdk'),
-    Operation = StellarSdk.Operation,
-    StrKey = StellarSdk.StrKey,
-  StellarBase = require('stellar-base'),
-  BigDecimal=require('bigdecimal').BigDecimal,
-  crypto = require("crypto"),
+	path = require('path'),
+	StellarSdk = require('stellar-sdk'),
+	Operation = StellarSdk.Operation,
+	StrKey = StellarSdk.StrKey,
+	BigDecimal = require('bigdecimal').BigDecimal,
+	crypto = require("crypto"),
 	// optional = require("optional"),
-    request = require('request'),
-  log = require('tracer').colorConsole();
+	request = require('request'),
+	moment = require('moment'),
+	roundTo = require('round-to'),
+	log = require('tracer').colorConsole();
 
 let pgo, fake
-  try {
-    pgo = require('pg-orm');
-      fake = require("./stellarFake");
-  } catch (error) {
+try {
+	pgo = require('pg-orm');
+	fake = require("./stellarFake");
+} catch (error) {
 
-  }
+}
 
 var Model = Object
 if (pgo) {
@@ -240,7 +241,7 @@ StellarServer.prototype.getTransaction=async function(transactionId) {
         .transaction(transactionId)
         .call();
 
-    var txd = new StellarBase.Transaction(tx.envelope_xdr)
+    var txd = new StellarSdk.Transaction(tx.envelope_xdr)
 
     if (txd.operations[0].type!="payment") {
     	throw new Error("not a payment: "+transactionId)
@@ -327,6 +328,90 @@ StellarServer.prototype.getAccount = function (info, trustedIssuers) {
     let a = new StellarAccount(main, this.server, trustedIssuers, signers)
     return a
 }
+
+class StellarAccountEffect {
+	constructor(data) {
+		Object.assign(this, data)
+
+		delete this._links
+
+		this.time = new moment(this.created_at)
+
+		let NUMERICAL_FIELDS = ["sold_amount", "bought_amount", "amount"]
+		for (let nf of NUMERICAL_FIELDS) {
+			if (this[nf]) {
+				this[nf] = +this[nf]
+			}
+		}
+
+		if (this.sold_asset_type) {
+			if ("native" == this.sold_asset_type) {
+				this.sold_asset = "native"
+			} else {
+				this.sold_asset = `${this.sold_asset_code}-${this.sold_asset_issuer}`
+			}
+		}
+
+		if (this.bought_asset_type) {
+			if ("native" == this.bought_asset_type) {
+				this.bought_asset = "native"
+			} else {
+				this.bought_asset = `${this.bought_asset_code}-${this.bought_asset_issuer}`
+			}
+		}
+
+		if (this.asset_type) {
+			if ("native" == this.asset_type) {
+				this.asset = "native"
+			} else {
+				this.asset = `${this.asset_code}-${this.asset_issuer}`
+			}
+		}
+	}
+
+	getBoughtAsset() {
+		return new StellarSdk.Asset(this.bought_asset_code, this.bought_asset_issuer)
+	}
+
+	getSoldAsset() {
+		return new StellarSdk.Asset(this.sold_asset_code, this.sold_asset_issuer)
+	}
+
+	getBoughtPrice() {
+		if (this.isOpenPosition()) {
+			return roundTo(this.sold_amount / this.bought_amount, 7)
+		} else {
+			throw new Error("not an open position")
+		}
+	}
+
+	getSoldPrice() {
+		if (this.isClosePosition()) {
+			return roundTo(this.bought_amount / this.sold_amount, 7)
+		} else {
+			throw new Error("not a close position")
+		}
+	}
+
+	isOpenPosition() {
+		return (this.type == "trade" && this.sold_asset == "native")
+	}
+
+	isClosePosition() {
+		return (this.type=="trade" && this.bought_asset == "native")
+	}
+
+	isMergeableWith(other) {
+		return (this.created_at == other.created_at && this.sold_asset_code == other.sold_asset_code && this.bought_asset_code == other.bought_asset_code)
+	}
+
+	mergeWith(other) {
+		this.sold_amount += other.sold_amount
+		this.bought_amount += other.bought_amount
+	}
+}
+
+module.exports.StellarAccountEffect = StellarAccountEffect
 
 class StellarAccount {
 	constructor(info, server, trustedIssuers, signers) {
@@ -703,6 +788,11 @@ class StellarAccount {
 		return false;
     }
 
+	async getNativeBalance() {
+		let b = await this.getBalanceFull()
+		return b.native
+	}
+
 	async getBalance() {
 		let account = await this.server.accounts().accountId(this.address).call()
 
@@ -772,7 +862,7 @@ class StellarAccount {
 
 	async deleteAllOffers() {
 		let os = await this.getOffers()
-		console.dir(os)
+		// console.dir(os)
 		for (let offer of os) {
 			this.deleteOffer(offer.id)
 		}
@@ -828,16 +918,20 @@ class StellarAccount {
 		console.dir(operationOpts)
 
 		let op = StellarSdk.Operation.manageOffer(operationOpts)
-		console.dir(op)
-		console.log(op.id)
+		// console.dir(op)
+		// console.log(op.id)
 		let transaction = new StellarSdk.TransactionBuilder(this.account)
 			.addOperation(op)
 
 		transaction = transaction.build();
         this.sign(transaction)
 
-		var result = await this.server.submitTransaction(transaction);
-		return result
+		try {
+			var result = await this.server.submitTransaction(transaction);
+			return result
+		} catch (error) {
+			throw new HorizonError(error)
+		}
 	}
 
 	async getTransaction(transactionId, matchSpec) {
@@ -850,7 +944,7 @@ class StellarAccount {
 			return null
 		}
 
-		var txd = new StellarBase.Transaction(tx.envelope_xdr)
+		var txd = new StellarSdk.Transaction(tx.envelope_xdr)
 		let record= this.parseTransaction(tx)
 		if (matchSpec) {
 			if (matchSpec.memo && record.memo != matchSpec.memo) {
@@ -864,28 +958,42 @@ class StellarAccount {
 		return record
 	}
 
-	async listEffects(lastSeenRecord) {
+	async listEffects(lastSeenRecord, spec) {
+		let filterType, oneShot
+		if (spec) {
+			filterType = spec.filterType
+			oneShot = spec.oneShot
+		}
+
 		let batch = await this.server.effects().forAccount(this.address).order('desc').limit(200).call()
 		// console.dir(batch)
 		let doContinue = true
 		let out = []
 		do {
-			if (batch.records.length == 0 ) {
+			if (batch.records.length == 0) {
 				break
 			}
 
 			console.log("got " + batch.records.length)
 			for (let record of batch.records) {
 				if (lastSeenRecord && record.id == lastSeenRecord) {
-					// console.log("already seen")
+					console.log("already seen")
 					doContinue = false
 					break
 				}
 
-				out.push(record)
+				if (filterType && record.type != filterType) {
+					continue
+				}
+
+				out.push(new StellarAccountEffect(record))
 			} // for loop
 
 			if (batch.records.length == 0 || !doContinue) {
+				break
+			}
+
+			if (oneShot) {
 				break
 			}
 
@@ -927,5 +1035,22 @@ class StellarAccount {
 		return out
 	}
 }
+
+class HorizonError extends Error {
+	constructor(error) {
+		super("Horizon Error");
+		this.error = error
+		this.parseError()
+	}
+
+	parseError() {
+		let response = this.error.response
+		if (response) {
+			this.code = response.data.extras.result_codes
+		}
+	}	
+}
+
+module.exports.HorizonError = HorizonError
 
 //module.exports.accounts = require("./stellarAccount")
