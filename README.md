@@ -9,7 +9,7 @@ A JS library that provides nicely abstracted, promisfied calls for common Stella
 `StellarAccountEffect` provides parsing for Stellar account effects.
 
 # Usage
-To see how it can be used, please see s-cli and s-shell, which makes use of this library.
+To see how it can be used, please see s-cli, s-shell, and mirrorbot, which makes use of this library.
 
 #### Sample Usage
 ```javascript
