@@ -574,6 +574,22 @@ class StellarAccount {
 		} 
     }
     
+    async setInflation(addr) {
+    	log.info("setting inflation:" + addr)
+        await this.loadAccount()
+
+        var txBuilder = new StellarSdk.TransactionBuilder(this.account)
+
+        txBuilder.addOperation(Operation.setOptions({
+                inflationDest: addr
+        }))
+
+        let transaction = txBuilder.build(); 
+        this.sign(transaction)
+        var result = await this.server.submitTransaction(transaction);
+        return result
+    }
+    
 	async setHomeDomain(dom) {
 		await this.loadAccount()
 
@@ -583,7 +599,6 @@ class StellarAccount {
 	      }))
 	      .build();
 	    this.sign(transaction)
-	    log.info("submit tx")
 	    return await this.server.submitTransaction(transaction);
 	}
 
@@ -644,8 +659,8 @@ class StellarAccount {
         let transaction = txBuilder.build(); 
         this.sign(transaction)
         var result = await this.server.submitTransaction(transaction);
-        log.info("subm result")
-        console.dir(result)
+        // log.info("subm result")
+        // console.dir(result)
         return result
     }
 
@@ -673,8 +688,8 @@ class StellarAccount {
         let transaction = txBuilder.build(); 
         this.sign(transaction)
         var result = await this.server.submitTransaction(transaction);
-        log.info("subm result")
-        console.dir(result)
+        // log.info("subm result")
+        // console.dir(result)
         return result
     }
 
@@ -766,7 +781,7 @@ class StellarAccount {
         transaction.sign(this.key);
 
         for (let sk of this.signerKeys) {
-            console.log("signing with: sk="+sk)
+            // console.log("signing with: sk="+sk)
             transaction.sign(sk);
         }
     }
