@@ -622,23 +622,32 @@ class StellarAccount {
         return result
     }
 
-	async setWeights() {
+	async setWeights(type, weight) {
         await this.loadAccount()
 
 		var txBuilder = new StellarSdk.TransactionBuilder(this.account)
+
+		let typeMap = {
+			"master": "masterWeight",
+			"low": "lowThreshold",
+			"medium": "medThreshold",
+			"high": "highThreshold",
+		}
+
+		if (!typeMap[type]) {
+			throw new Error("Unknown weight type: " + weight)
+		}
+
+		let op = {}
+		op[typeMap[type]] = weight
 		
-        txBuilder.addOperation(Operation.setOptions({
-                masterWeight: 1,
-                lowThreshold: 1,
-                medThreshold: 2,
-                highThreshold: 2
-            }))
+        txBuilder.addOperation(Operation.setOptions(op))
 
         let transaction = txBuilder.build(); 
         this.sign(transaction)
         var result = await this.server.submitTransaction(transaction);
-        log.info("subm result")
-        console.dir(result)
+        // log.info("subm result")
+        // console.dir(result)
         return result
     }
 
@@ -678,12 +687,12 @@ class StellarAccount {
                 }
             }))
 
-        txBuilder.addOperation(Operation.setOptions({
-                masterWeight: 1,
-                lowThreshold: count - 1,
-                medThreshold: count,
-                highThreshold: count
-            }))
+        // txBuilder.addOperation(Operation.setOptions({
+        //         masterWeight: 1,
+        //         lowThreshold: count - 1,
+        //         medThreshold: count,
+        //         highThreshold: count
+        //     }))
 
         let transaction = txBuilder.build(); 
         this.sign(transaction)
