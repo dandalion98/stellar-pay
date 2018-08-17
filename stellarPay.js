@@ -776,11 +776,12 @@ class StellarAccount {
 			var result = await server.submitTransaction(transaction);
 
 			// log.info(`successfully sent payment`)
-			console.dir(result)
+			// console.dir(result)
 			return [result.hash, null]
 		} catch (error) {
-			log.error(`error sending payment: ${error}`)
-			log.error(error)
+			error = new HorizonError(error)
+			log.error("Failed to send payment with reason: ")
+			console.dir(error.reason)
 			return [null, "unknown"]
 		} 
     }
@@ -1071,6 +1072,14 @@ class HorizonError extends Error {
 		let response = this.error.response
 		if (response) {
 			this.code = response.data.extras.result_codes
+			this.reason = this.code
+			return
+		}
+
+		let data = this.error.data
+		if (data) {					
+			this.code = data.extras.result_codes
+			this.reason = this.code
 		}
 	}	
 }
