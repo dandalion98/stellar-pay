@@ -796,6 +796,33 @@ class StellarAccount {
         }
     }
 
+	async acceptAsset(asset, limit) {
+		let t = await this.hasTrust(asset)
+		if (t) {
+			return
+		}
+
+		log.info("accepting asset")
+		console.dir(asset)
+		var transaction = new StellarSdk.TransactionBuilder(this.account)
+			.addOperation(StellarSdk.Operation.changeTrust({
+				asset: asset,
+				limit: new String(limit)
+			}))
+			.build();
+
+		this.sign(transaction)
+
+		try {
+			return await this.server.submitTransaction(transaction);
+		} catch (error) {
+			error = new HorizonError(error)
+			log.error("acceptAsset failed")
+			console.dir(error.code)
+			throw error
+		}
+	}
+
     async hasTrust(asset) {
 		let account = await this.server.accounts().accountId(this.address).call()
 
