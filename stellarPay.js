@@ -272,12 +272,14 @@ TransactionBuilder.prototype.amount=function(value) {
 	return this
 }
 
-module.exports.testServer = function () {  	
-	return new StellarServer('https://horizon-testnet.stellar.org', true)
+module.exports.testServer = function (addr) {
+	addr = addr || 'https://horizon-testnet.stellar.org'
+	return new StellarServer(addr, true)
 };
 
-module.exports.liveServer = function () {
-	return new StellarServer('https://horizon.stellar.org', false)
+module.exports.liveServer = function (addr) {
+	addr = addr || 'https://horizon.stellar.org'
+	return new StellarServer(addr, false)
 };
 
 module.exports.fakeServer = function () {  
