@@ -26,7 +26,7 @@ if (pgo) {
 	Model = pgo.Model;
 }
 
-function StellarServer(serverAddress, isTestnet) {
+function StellarServer(serverAddress, isTestnet, stellarOpts) {
 	this.serverAddress=serverAddress
 	this.isTestnet = isTestnet
 	log.info(`creating server: ${serverAddress} isTestnet: ${isTestnet}`)
@@ -37,7 +37,7 @@ function StellarServer(serverAddress, isTestnet) {
 		StellarSdk.Network.usePublicNetwork();
 	}
 
-	this.server = new StellarSdk.Server(serverAddress);
+	this.server = new StellarSdk.Server(serverAddress, stellarOpts);
 }
 
 class ExtendableError extends Error {
@@ -272,14 +272,14 @@ TransactionBuilder.prototype.amount=function(value) {
 	return this
 }
 
-module.exports.testServer = function (addr) {
+module.exports.testServer = function (addr, stellarOpts) {
 	addr = addr || 'https://horizon-testnet.stellar.org'
-	return new StellarServer(addr, true)
+	return new StellarServer(addr, true, stellarOpts)
 };
 
-module.exports.liveServer = function (addr) {
+module.exports.liveServer = function (addr, stellarOpts) {
 	addr = addr || 'https://horizon.stellar.org'
-	return new StellarServer(addr, false)
+	return new StellarServer(addr, false, stellarOpts)
 };
 
 module.exports.fakeServer = function () {  
