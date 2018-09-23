@@ -493,7 +493,7 @@ class StellarAccount {
 		try {
 			await this.loadAccount()
 
-			log.info(`sending path payment to dest=${dest} amt=${destAmount}`)
+			// log.info(`sending path payment to dest=${dest} amt=${destAmount}`)
 
 			let txBuilder = new StellarSdk.TransactionBuilder(this.account);
 
@@ -518,23 +518,11 @@ class StellarAccount {
 
 			var result = await this.server.submitTransaction(transaction);
 
-			console.dir(result)
+			// console.dir(result)
 			return result.hash
 		} catch (error) {
-			log.error(`error sending payment: ${error}`)
-			log.error(error)
-			var stringify = require('json-stringify-safe');
-			var json = stringify(error, null, 4);
-			let fs = require('fs')
-			fs.writeFileSync("./error", json, 'utf8');
-
-			if (error.data) {
-				log.info("---------------------------------")
-				log.info("DUMP extras")
-				log.info("---------------------------------")
-				console.dir(error.data)
-			}
-			throw error
+			log.error(`error sending payment`)
+			throw new HorizonError(error)
 		}
 	}
 
