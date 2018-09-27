@@ -871,8 +871,8 @@ class StellarAccount {
 		return out
 	}
 
-	async loadAccount() {
-		if (this.account) {
+	async loadAccount(force) {
+		if (!force && this.account) {
 			return
 		}
 
